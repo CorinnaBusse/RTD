@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import math
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
@@ -46,7 +47,7 @@ for modell in modelle:
 
     elif modell == "Tanks-in-Series":
         N = st.sidebar.slider("Anzahl CSTRs (N)", 1, 100, 5)
-        E = (N**N) * t**(N - 1) * np.exp(-N * t) / np.math.factorial(N - 1)
+        E = (N**N) * t**(N - 1) * np.exp(-N * t) / math.factorial(N - 1)
         beschriftung = f"Tanks-in-Series (N={N})"
 
     elif modell == "Plug Flow (PFTR)":
