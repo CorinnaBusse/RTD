@@ -4,6 +4,7 @@ import math
 import pandas as pd
 import matplotlib.pyplot as plt
 from io import BytesIO
+from scipy.special import gammainc
 
 st.set_page_config(page_title="RTD-Simulation", layout="wide")
 st.title("🧪 RTD-Simulation – Verweilzeitverteilung")
@@ -17,7 +18,7 @@ modelle = st.sidebar.multiselect(
     default=["Tanks-in-Series"]
 )
 
-t_max = st.sidebar.slider("Maximale Zeit (t)", 5.0, 100.0, 30.0)
+t_max = st.sidebar.slider("Maximale Zeit (t)", 2.0, 50.0, 30.0)
 t_points = st.sidebar.slider("Anzahl Zeitpunkte", 100, 2000, 500)
 t = np.linspace(0.001, t_max, int(t_points))
 dt = t[1] - t[0]
@@ -43,23 +44,27 @@ for modell in modelle:
     if modell == "Axial Dispersion":
         Bo = st.sidebar.slider("Bodenstein-Zahl (Bo)", 1.0, 1000.0, 20.0, step=1.0)
         E = (1 / np.sqrt(4 * np.pi / Bo * t)) * np.exp(-(1 - t)**2 * Bo / (4 * t))
-        beschriftung = f"Axial Dispersion (Bo={Bo:.0f})"
+        F = np.cumsum(E) * dt
+        beschriftung = f"Axiale Dispersion (Bo={Bo:.0f})"
 
     elif modell == "Tanks-in-Series":
-        N = st.sidebar.slider("Anzahl CSTRs (N)", 1, 100, 5)
+        N = st.sidebar.slider("Anzahl CSTRs (N)", 1, 50, 5)
         E = (N**N) * t**(N - 1) * np.exp(-N * t) / math.factorial(N - 1)
+        F = gammainc(N, N * t)
         beschriftung = f"Tanks-in-Series (N={N})"
 
     elif modell == "Plug Flow (PFTR)":
         E = np.zeros_like(t)
         E[np.argmin(np.abs(t - 1))] = 1 / dt  # Dirac-Delta-Näherung
+        F = np.where(t >= 1, 1.0, 0.0)
         beschriftung = "Plug Flow (PFTR)"
 
     elif modell == "CSTR":
         E = np.exp(-t)
+        F = 1 - np.exp(-t)
         beschriftung = "CSTR"
 
-    F = np.cumsum(E) * dt
+    #F = np.cumsum(E) * dt
     tau = np.trapz(t * E, t)
     theta = t / tau  # dimensionslose Zeit
 
@@ -89,17 +94,17 @@ for modell in modelle:
     st.markdown(f"**{beschriftung}** — Mittlere Verweilzeit (τ): `{tau:.3f}`")
 
 # Achsentitel und Layout
-ax1.set_xlabel("θ = t / τ" if dimensionless_time else "Zeit (t)")
+ax1.set_xlabel("θ = t / τ" if dimensionless_time else "Zeit t in s")
 if anzeige != "Nur F(t)":
-    ax1.set_ylabel("E(t)")
+    ax1.set_ylabel("E(t) / s$^{-1}$")
     if log_y:
         ax1.set_yscale("log")
 if anzeige == "Nur F(t)":
-    ax1.set_ylabel("F(t)")
+    ax1.set_ylabel("F(t) / -")
     if log_y:
         ax1.set_yscale("log")
 if anzeige == "Beides":
-    ax2.set_ylabel("F(t)")
+    ax2.set_ylabel("F(t) / -")
     if log_y:
         ax1.set_yscale("log")
         ax2.set_yscale("log")
